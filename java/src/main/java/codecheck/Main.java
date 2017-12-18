@@ -1,16 +1,17 @@
 package codecheck;
 
-import java.text.ParseException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 import java.util.Scanner;
 
-
+// Ticker is able to split time span according to special time point,
+// Special time points are: 0:00, 5:00, 8:00, 16:00, 22:00, daily time limit, weekly time limit, end of span.
 class Ticker {
-    private static final boolean DEV_MODE = true;
+    private static final boolean DEV_MODE = false;
 
     private final LocalDate givenDate;
     private Integer worktimeOfTheDayInMinutes;
@@ -168,6 +169,11 @@ class Ticker {
     public int getTickLengthInMinute() {
         return tickLengthInMinute;
     }
+
+    // Getter
+    public LocalDate getGivenDate() {
+        return this.givenDate;
+    }
 }
 
 
@@ -175,8 +181,7 @@ class Ticker {
 // Saturday is the prescribed holiday.
 // Sunday is statutory holiday.
 // Regular working hour: 8:00〜12:00,13:00〜16:00
-class WorkingTime {
-    // DEV_MODE is for printing debug message.
+class TimeCard {
     private static final boolean DEV_MODE = true;
 
     // These are what we need to figure out.
@@ -189,121 +194,124 @@ class WorkingTime {
     // Time window.
     private LocalDate startingDay;
     private LocalDate endingDay;
+    private LocalDate nextMonday;
 
     // Counting the total work time.
-    Integer worktimeOfTheDayInMinutes;
-    Integer worktimeOfTheWeekInMinutes;
+    private Integer worktimeOfTheDayInMinutes;
+    private Integer worktimeOfTheWeekInMinutes;
 
     // You have to pass a string with format "yyyy/MM" to this constructor.
-    public WorkingTime(String month) {
+    public TimeCard(String month) {
         // Initialize fields.
         this.overtimeWithinStatutoryWorkingMinutes = 0;
         this.overtimeInExcessOfStatutoryWorkingMinutes = 0;
         this.lateNightOvertimeWorkingMinutes = 0;
         this.workingHoursOnPrescribedHolidayWorkingMinutes = 0;
         this.workingHoursOnStatutoryHolidayWorkingMinutes = 0;
-        this.worktimeOfTheDayInMinutes = 0;
         this.worktimeOfTheWeekInMinutes = 0;
 
         // Initialize time window.
-        LocalDate dt = LocalDate.parse(month + "/01");
+        LocalDate dt = LocalDate.parse(month + "/01", DateTimeFormatter.ofPattern("yyyy/MM/dd"));
         this.startingDay = dt.withDayOfMonth(1);
         this.endingDay = dt.withDayOfMonth(dt.lengthOfMonth());
+        this.nextMonday = LocalDate.from(startingDay).with(TemporalAdjusters.firstInMonth(DayOfWeek.MONDAY));
+
+        System.out.println("startingDay: " + startingDay);
+        System.out.println("endingDay: " + endingDay);
     }
 
-    // Wrap parseDate and ParseWorkingHour
+    // Consume a line.
     public void work(String line) {
         String[] tokens = line.split("\\s|-");
-        LocalDate dt = LocalDate.parse(tokens[0]);
+        if (DEV_MODE) {
+            System.out.println("------------------------------------------------------------");
+            for (String s : tokens) System.out.print(s + " ");
+            System.out.println();
+        }
+        // Consume first element.
+        Ticker ticker = new Ticker(tokens[0], this.worktimeOfTheWeekInMinutes);
+        if (DEV_MODE) System.out.println(ticker.getGivenDate().getDayOfWeek().toString());
 
-        // Reset the total work time if necessary.
-        this.worktimeOfTheDayInMinutes = 0;
-        if (dt.getDayOfWeek().equals(DayOfWeek.MONDAY))
+        // reset accumulated work time if necessary.
+        worktimeOfTheDayInMinutes = 0;
+        if (ticker.getGivenDate().isAfter(nextMonday) || ticker.getGivenDate().isEqual(nextMonday)) {
             this.worktimeOfTheWeekInMinutes = 0;
-
-        for (int i = 1; i < tokens.length; i += 2) {
-
-
+            nextMonday = nextMonday.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
         }
 
+        // Consume the remaining element.
+        for (int f1 = 1; f1 < tokens.length; f1 += 2) {
+            ticker.parseTime(tokens[f1], tokens[f1 + 1]);
+            while (ticker.hasNextTick()) {
+                addTime(ticker.getDateTick(), ticker.getTimeTick(), ticker.getTickLengthInMinute());
+            }
+        }
+        if (DEV_MODE)
+            System.out.println("Work time of the day: " + this.worktimeOfTheDayInMinutes / 60 + " hours "
+                    + this.worktimeOfTheDayInMinutes % 60 + " minutes.");
+        if (DEV_MODE)
+            System.out.println("Work time of the week: " + this.worktimeOfTheWeekInMinutes / 60 + " hours "
+                    + this.worktimeOfTheWeekInMinutes % 60 + " minutes.");
+
     }
 
-    // This method will update corresponding overtime hours according to [beginning,ending).
-    // This method is a wrapper of countHour method.
-    private void countOvertime(LocalDate dt, LocalTime beginning, LocalTime ending) {
-
-    }
-
-
-    // Update corresponding overtime hour according to [tm, nextHour).
-    // e.g. [9:23,10:00) or [21:00, 22:00)
-    private void countHour(LocalDate dt, LocalTime tm) throws Exception {
-        // If it is workday.
-
-        Integer durationInMinutes = (60 - tm.getMinute());
-
-        //If the date is within the intended month.
-        if (dt.isAfter(startingDay) && dt.isBefore(endingDay)) {
+    private void addTime(LocalDate dt, LocalTime tm, int minutes) {
+        // If the date is within the intended month:
+        if ((dt.isAfter(startingDay) || dt.equals(startingDay)) && dt.isBefore(endingDay)) {
+            // Monday to Friday:
             if (dt.getDayOfWeek().equals(DayOfWeek.MONDAY) ||
                     dt.getDayOfWeek().equals(DayOfWeek.TUESDAY) ||
                     dt.getDayOfWeek().equals(DayOfWeek.WEDNESDAY) ||
                     dt.getDayOfWeek().equals(DayOfWeek.TUESDAY) ||
                     dt.getDayOfWeek().equals(DayOfWeek.FRIDAY)) {
-                // Workday:
-
                 // Type 1
                 if (isWithinWorktimeLimit() && !isRegularWorkTime(tm)) {
-                    overtimeWithinStatutoryWorkingMinutes += durationInMinutes;
+                    overtimeWithinStatutoryWorkingMinutes += minutes;
+                    if (DEV_MODE) System.out.println("Type 1 += " + minutes + " minutes");
                 }
 
                 // Type 2
                 if (!isWithinWorktimeLimit()) {
-                    overtimeInExcessOfStatutoryWorkingMinutes += durationInMinutes;
+                    overtimeInExcessOfStatutoryWorkingMinutes += minutes;
+                    if (DEV_MODE) System.out.println("Type 2 += " + minutes + " minutes");
                 }
 
                 // Type 3
                 if (isLateNight(tm)) {
-                    lateNightOvertimeWorkingMinutes += durationInMinutes;
+                    lateNightOvertimeWorkingMinutes += minutes;
+                    if (DEV_MODE) System.out.println("Type 3 += " + minutes + " minutes");
                 }
-
-
-            } else if (dt.getDayOfWeek().equals(DayOfWeek.SATURDAY)) {
-                // Saturday:
-
-                // Type4
-                this.workingHoursOnPrescribedHolidayWorkingMinutes += durationInMinutes;
-
+            }
+            // Saturday:
+            else if (dt.getDayOfWeek().equals(DayOfWeek.SATURDAY)) {
                 // Type3
                 if (isLateNight(tm)) {
-                    this.lateNightOvertimeWorkingMinutes += durationInMinutes;
+                    this.lateNightOvertimeWorkingMinutes += minutes;
+                    if (DEV_MODE) System.out.println("Type 3 += " + minutes + " minutes");
                 }
 
-            } else if (dt.getDayOfWeek().equals(DayOfWeek.SUNDAY)) {
-                // Sunday:
+                // Type4
+                this.workingHoursOnPrescribedHolidayWorkingMinutes += minutes;
+                if (DEV_MODE) System.out.println("Type 4 += " + minutes + " minutes");
+            }
+            // Sunday:
+            else if (dt.getDayOfWeek().equals(DayOfWeek.SUNDAY)) {
+                // Type3
+                if (isLateNight(tm)) {
+                    this.lateNightOvertimeWorkingMinutes += minutes;
+                    if (DEV_MODE) System.out.println("Type 3 += " + minutes + " minutes");
+                }
 
                 // Type5
-                this.workingHoursOnStatutoryHolidayWorkingMinutes += durationInMinutes;
-
-
+                this.workingHoursOnStatutoryHolidayWorkingMinutes += minutes;
+                if (DEV_MODE) System.out.println("Type 5 += " + minutes + " minutes");
             } else {
-                throw new Exception("Something is wrong, you got " + dt.getDayOfWeek().toString() + ".");
+                if (DEV_MODE) System.out.println("ERROR!");
             }
+
         }
-
-        this.worktimeOfTheDayInMinutes++;
-        this.worktimeOfTheWeekInMinutes++;
-    }
-
-
-    // Parse the first element of a working hours line
-    public LocalDate parseDate(String date) throws ParseException {
-        LocalDate dt = LocalDate.parse(date);
-        return dt;
-    }
-
-    // Parse the remaining elements of a working hours line.
-    public void parseWorkingHour() {
-        // TODO: Implement this.
+        this.worktimeOfTheDayInMinutes += minutes;
+        this.worktimeOfTheWeekInMinutes += minutes;
     }
 
     public void printWorkingTime() {
@@ -331,6 +339,25 @@ class WorkingTime {
         return this.worktimeOfTheWeekInMinutes < 2400 && this.worktimeOfTheDayInMinutes < 480;
     }
 
+    public int getOvertimeWithinStatutoryWorkingMinutes() {
+        return overtimeWithinStatutoryWorkingMinutes;
+    }
+
+    public int getOvertimeInExcessOfStatutoryWorkingMinutes() {
+        return overtimeInExcessOfStatutoryWorkingMinutes;
+    }
+
+    public int getLateNightOvertimeWorkingMinutes() {
+        return lateNightOvertimeWorkingMinutes;
+    }
+
+    public int getWorkingHoursOnPrescribedHolidayWorkingMinutes() {
+        return workingHoursOnPrescribedHolidayWorkingMinutes;
+    }
+
+    public int getWorkingHoursOnStatutoryHolidayWorkingMinutes() {
+        return workingHoursOnStatutoryHolidayWorkingMinutes;
+    }
 }
 
 
