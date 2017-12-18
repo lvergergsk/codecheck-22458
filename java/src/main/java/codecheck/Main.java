@@ -235,8 +235,11 @@ class TimeCard {
         // reset accumulated work time if necessary.
         worktimeOfTheDayInMinutes = 0;
         if (ticker.getGivenDate().isAfter(nextMonday) || ticker.getGivenDate().isEqual(nextMonday)) {
+            if (DEV_MODE)
+                System.out.println("Weekly work hours reset. givenDate is " + ticker.getGivenDate() + " nextMonday is " + nextMonday + ".");
             this.worktimeOfTheWeekInMinutes = 0;
-            nextMonday = nextMonday.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
+            while (nextMonday.isBefore(ticker.getGivenDate()) || nextMonday.isEqual(ticker.getGivenDate()))
+                nextMonday = nextMonday.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
         }
 
         // Consume the remaining element.
@@ -256,13 +259,16 @@ class TimeCard {
     }
 
     private void addTime(LocalDate dt, LocalTime tm, int minutes) {
+        if (DEV_MODE) System.out.println("------");
+        if (DEV_MODE)
+            System.out.println(dt.toString() + " " + tm.toString() + " :" + minutes + " minutes.");
         // If the date is within the intended month:
         if ((dt.isAfter(startingDay) || dt.equals(startingDay)) && dt.isBefore(endingDay)) {
             // Monday to Friday:
             if (dt.getDayOfWeek().equals(DayOfWeek.MONDAY) ||
                     dt.getDayOfWeek().equals(DayOfWeek.TUESDAY) ||
                     dt.getDayOfWeek().equals(DayOfWeek.WEDNESDAY) ||
-                    dt.getDayOfWeek().equals(DayOfWeek.TUESDAY) ||
+                    dt.getDayOfWeek().equals(DayOfWeek.THURSDAY) ||
                     dt.getDayOfWeek().equals(DayOfWeek.FRIDAY)) {
                 // Type 1
                 if (isWithinWorktimeLimit() && !isRegularWorkTime(tm)) {
@@ -306,7 +312,7 @@ class TimeCard {
                 this.workingHoursOnStatutoryHolidayWorkingMinutes += minutes;
                 if (DEV_MODE) System.out.println("Type 5 += " + minutes + " minutes");
             } else {
-                if (DEV_MODE) System.out.println("ERROR!");
+                if (DEV_MODE) System.out.println("ERROR: you got " + dt.getDayOfWeek().toString());
             }
 
         }
