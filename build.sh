@@ -3,8 +3,8 @@
 ROOT=$(cd $(dirname $0) && pwd)
 
 ### Java ###
-# cd $ROOT/java/
-# mvn package -Dmaven.test.skip=true
+cd $ROOT/java/
+mvn package -Dmaven.test.skip=true
 
 ### Scala ###
 # cd $ROOT/scala/

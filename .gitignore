@@ -3,3 +3,6 @@ java/target/
 scala/target/
 python/**/*.pyc
 c++/**/*.o
+
+java/.idea
+java/ce-exam.iml
