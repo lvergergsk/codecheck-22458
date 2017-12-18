@@ -13,6 +13,8 @@ class Ticker {
     private static final boolean DEV_MODE = true;
 
     private final LocalDate givenDate;
+    private Integer worktimeOfTheDayInMinutes;
+    private Integer worktimeOfTheWeekInMinutes;
 
     private LocalDate startDate;
     private LocalTime startTime;
@@ -25,8 +27,10 @@ class Ticker {
     private int tickLengthInMinute;
 
     // Need one instance for each line of input.
-    public Ticker(String date) {
+    public Ticker(String date, Integer worktimeOfTheWeekInMinutes) {
         this.givenDate = LocalDate.parse(date, DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+        this.worktimeOfTheDayInMinutes = 0;
+        this.worktimeOfTheWeekInMinutes = worktimeOfTheWeekInMinutes;
     }
 
     // Format: hh:mm
@@ -101,15 +105,53 @@ class Ticker {
         return true;
     }
 
-    // update step time length to next o'clock or end of the time span.
+    // Update step time length to next event or end of the time span.
+    // A "event" is a shift of way of calculating salary.
     private void updateTickLength() {
-        if (this.dateTick.equals(this.endDate)) {
-            int minutesUntilEndTime = (int) this.timeTick.until(this.endTime, ChronoUnit.MINUTES);
-            int minutesUntilNextHour = 60 - timeTick.getMinute();
-            this.tickLengthInMinute = minutesUntilEndTime < minutesUntilNextHour ? minutesUntilEndTime : minutesUntilNextHour;
-        } else {
-            this.tickLengthInMinute = 60 - timeTick.getMinute();
-        }
+
+        // This assume there will not be two same time in one day (Equal sign.)
+        int minutesUntilEndTime = (int) this.timeTick.until(this.endTime, ChronoUnit.MINUTES);
+        minutesUntilEndTime = minutesUntilEndTime >= 0 ? minutesUntilEndTime : Integer.MAX_VALUE;
+
+        int minutesUntilEndOfDay = (int) this.timeTick.until(LocalTime.MAX, ChronoUnit.MINUTES) + 1;
+
+        int minutesUntilDayWorktimeLimit = 480 - this.worktimeOfTheDayInMinutes;
+        minutesUntilDayWorktimeLimit = minutesUntilDayWorktimeLimit > 0 ? minutesUntilDayWorktimeLimit : Integer.MAX_VALUE;
+
+        int minutesUntilWeekWorktimeLimit = 2400 - this.worktimeOfTheWeekInMinutes;
+        minutesUntilWeekWorktimeLimit = minutesUntilWeekWorktimeLimit > 0 ? minutesUntilWeekWorktimeLimit : Integer.MAX_VALUE;
+
+        int minutesUntilEndOfRegularWorkTime = (int) this.timeTick.until(LocalTime.of(16, 0), ChronoUnit.MINUTES);
+        minutesUntilEndOfRegularWorkTime = minutesUntilEndOfRegularWorkTime > 0 ? minutesUntilEndOfRegularWorkTime : Integer.MAX_VALUE;
+
+        int minutesUntilStartOfRegularWorkTime = (int) this.timeTick.until(LocalTime.of(8, 0), ChronoUnit.MINUTES);
+        minutesUntilStartOfRegularWorkTime = minutesUntilStartOfRegularWorkTime > 0 ? minutesUntilStartOfRegularWorkTime : Integer.MAX_VALUE;
+
+        int minutesUntilStartOfLateNight = (int) this.timeTick.until(LocalTime.of(22, 0), ChronoUnit.MINUTES);
+        minutesUntilStartOfLateNight = minutesUntilStartOfLateNight > 0 ? minutesUntilStartOfLateNight : Integer.MAX_VALUE;
+
+        int minutesUntilEndOfLateNight = (int) this.timeTick.until(LocalTime.of(5, 0), ChronoUnit.MINUTES);
+        minutesUntilEndOfLateNight = minutesUntilEndOfLateNight > 0 ? minutesUntilEndOfLateNight : Integer.MAX_VALUE;
+
+        this.tickLengthInMinute = min(minutesUntilEndTime, minutesUntilEndOfDay, minutesUntilDayWorktimeLimit,
+                minutesUntilWeekWorktimeLimit, minutesUntilStartOfRegularWorkTime, minutesUntilEndOfRegularWorkTime,
+                minutesUntilStartOfLateNight, minutesUntilEndOfLateNight);
+
+        this.worktimeOfTheDayInMinutes += tickLengthInMinute;
+        this.worktimeOfTheWeekInMinutes += tickLengthInMinute; // TODO: Confirm this is passed to the caller.
+
+    }
+
+    // Helper function
+    public static int min(int... n) {
+        int i = 0;
+        int min = n[i];
+
+        while (++i < n.length)
+            if (n[i] < min)
+                min = n[i];
+
+        return min;
     }
 
     // Getter
