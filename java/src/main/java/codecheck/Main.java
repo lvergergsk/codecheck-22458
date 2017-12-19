@@ -182,7 +182,7 @@ class Ticker {
 // Sunday is statutory holiday.
 // Regular working hour: 8:00〜12:00,13:00〜16:00
 class TimeCard {
-    private static final boolean DEV_MODE = true;
+    private static final boolean DEV_MODE = false;
 
     // These are what we need to figure out.
     private int overtimeWithinStatutoryWorkingMinutes;
@@ -367,10 +367,22 @@ class TimeCard {
 }
 
 
+// Wrap up here.
 public class Main {
     private static final boolean DEV_MODE = true;
 
     public static void main(String... args) {
+        TimeCard timeCard = new TimeCard(args[0]);
+        StringBuilder stringFormatter = new StringBuilder();
 
+        for (int i = 1, l = args.length; i < l; i++) {
+            if (args[i].matches("\\d{4}/\\d{2}/\\d{2}")) {
+                stringFormatter = new StringBuilder();
+                timeCard.work(stringFormatter.toString());
+            }
+            stringFormatter.append(args[i] + " ");
+        }
+
+        timeCard.printWorkingTime();
     }
 }
