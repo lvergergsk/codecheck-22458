@@ -6,3 +6,4 @@ c++/**/*.o
 
 java/.idea/
 java/ce-exam.iml
+*.orig
