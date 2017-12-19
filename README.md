@@ -1,0 +1,9 @@
+# codecheck-22458
+#### Source:
+- /java/src/main/java/codecheck/Main.java
+#### Test: 
+- /java/src/test/java/codecheck/MainTest.java
+- /java/src/test/java/codecheck/TickerTest.java
+- /java/src/test/java/codecheck/TimeCardTest.java
+#### Answer:
+- /answer.md
