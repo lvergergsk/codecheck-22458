@@ -139,8 +139,7 @@ class Ticker {
                 minutesUntilStartOfLateNight, minutesUntilEndOfLateNight);
 
         this.worktimeOfTheDayInMinutes += tickLengthInMinute;
-        this.worktimeOfTheWeekInMinutes += tickLengthInMinute; // TODO: Confirm this is passed to the caller.
-
+        this.worktimeOfTheWeekInMinutes += tickLengthInMinute;
     }
 
     // Helper function
@@ -216,8 +215,8 @@ class TimeCard {
         this.endingDay = dt.withDayOfMonth(dt.lengthOfMonth());
         this.nextMonday = LocalDate.from(startingDay).with(TemporalAdjusters.firstInMonth(DayOfWeek.MONDAY));
 
-        System.out.println("startingDay: " + startingDay);
-        System.out.println("endingDay: " + endingDay);
+        if (DEV_MODE) System.out.println("startingDay: " + startingDay);
+        if (DEV_MODE) System.out.println("endingDay: " + endingDay);
     }
 
     // Consume a line.
@@ -321,13 +320,20 @@ class TimeCard {
     }
 
     public void printWorkingTime() {
-        // TODO: Round up the value.
+        System.out.print(roundHour(overtimeWithinStatutoryWorkingMinutes) + "\n");
+        System.out.print(roundHour(overtimeInExcessOfStatutoryWorkingMinutes) + "\n");
+        System.out.print(roundHour(lateNightOvertimeWorkingMinutes) + "\n");
+        System.out.print(roundHour(workingHoursOnPrescribedHolidayWorkingMinutes) + "\n");
+        System.out.print(roundHour(workingHoursOnPrescribedHolidayWorkingMinutes) + "\n");
+    }
 
-        System.out.print(overtimeWithinStatutoryWorkingMinutes + "\n");
-        System.out.print(overtimeInExcessOfStatutoryWorkingMinutes + "\n");
-        System.out.print(lateNightOvertimeWorkingMinutes + "\n");
-        System.out.print(workingHoursOnPrescribedHolidayWorkingMinutes + "\n");
-        System.out.print(workingHoursOnStatutoryHolidayWorkingMinutes + "\n");
+    // Helper function
+    private int roundHour(int minute) {
+        int hour = minute / 60;
+        if (minute % 60 >= 30) {
+            hour++;
+        }
+        return hour;
     }
 
     // Helper function
@@ -372,17 +378,16 @@ public class Main {
     private static final boolean DEV_MODE = true;
 
     public static void main(String... args) {
-        TimeCard timeCard = new TimeCard(args[0]);
-        StringBuilder stringFormatter = new StringBuilder();
+        Scanner scanner = new Scanner(System.in);
 
-        for (int i = 1, l = args.length; i < l; i++) {
-            if (args[i].matches("\\d{4}/\\d{2}/\\d{2}")) {
-                stringFormatter = new StringBuilder();
-                timeCard.work(stringFormatter.toString());
-            }
-            stringFormatter.append(args[i] + " ");
+
+        TimeCard timeCard = new TimeCard(scanner.nextLine());
+
+        while (scanner.hasNextLine()) {
+            timeCard.work(scanner.nextLine());
         }
 
         timeCard.printWorkingTime();
+
     }
 }
