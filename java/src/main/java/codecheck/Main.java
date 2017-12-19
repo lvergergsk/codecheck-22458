@@ -2,6 +2,11 @@ package codecheck;
 
 public class Main {
 	public static void main(String... args) {
-		System.out.println("Hello, world!");
+
+	    // Just to see the format of input.
+	    for (String str:args){
+	        System.out.println(str);
+        }
+
 	}
 }
