@@ -262,7 +262,7 @@ class TimeCard {
         if (DEV_MODE)
             System.out.println(dt.toString() + " " + tm.toString() + " :" + minutes + " minutes.");
         // If the date is within the intended month:
-        if ((dt.isAfter(startingDay) || dt.equals(startingDay)) && dt.isBefore(endingDay)) {
+        if ((dt.isAfter(startingDay) || dt.equals(startingDay)) && (dt.isBefore(endingDay) || dt.equals(endingDay))) {
             // Monday to Friday:
             if (dt.getDayOfWeek().equals(DayOfWeek.MONDAY) ||
                     dt.getDayOfWeek().equals(DayOfWeek.TUESDAY) ||
