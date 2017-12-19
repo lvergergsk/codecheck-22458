@@ -23,7 +23,7 @@ PFはSequential Monte Carloというシミュレーション方法を使い、�
 | Computer Vision (電脳視覚)                                                          | 画像処理に必要な線形代数、DLT、輪郭認識、ベジェ曲線な。                                                                       |
 | Advanced Data Structure (データ構造)                                                | 償却解析、木構造、ヒープ構 (e.g. AVL木、フィボナッチ木、二分木、B木、B+木、トライ木、接尾辞木など)                            |
 
-## 開発物・成果物
+## 開発物・成果物の一例
 - Extended Kalman Filter & Particle Filter
   - 内容：モデルによって作られた時系列元データにホワイトノイズにかけた
 ものを入力とし、それを元データに還元するプログラム。QtでGUIとプロッティングを作りました。
