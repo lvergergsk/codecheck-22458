@@ -324,7 +324,7 @@ class TimeCard {
         System.out.print(roundHour(overtimeInExcessOfStatutoryWorkingMinutes) + "\n");
         System.out.print(roundHour(lateNightOvertimeWorkingMinutes) + "\n");
         System.out.print(roundHour(workingHoursOnPrescribedHolidayWorkingMinutes) + "\n");
-        System.out.print(roundHour(workingHoursOnPrescribedHolidayWorkingMinutes) + "\n");
+        System.out.print(roundHour(workingHoursOnStatutoryHolidayWorkingMinutes) + "\n");
     }
 
     // Helper function
